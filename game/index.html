@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SOLMAR: Three Days — Open-World Crime</title>
+<style>
+  html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#0b1020;font-family:'Segoe UI',Arial,sans-serif;color:#fff}
+  #game{position:fixed;inset:0}
+  canvas{display:block}
+  #hud{position:fixed;inset:0;pointer-events:none;z-index:5}
+  #topbar{position:absolute;top:12px;left:14px;right:14px;display:flex;justify-content:space-between;align-items:flex-start}
+  #wanted{font-size:26px;letter-spacing:4px;text-shadow:0 2px 6px #000}
+  #wanted .lit{color:#ffd23f} #wanted .dim{color:rgba(255,255,255,.28)}
+  #clock{font-size:18px;font-weight:700;text-shadow:0 2px 6px #000;text-align:right}
+  #clock small{display:block;font-size:12px;color:#9fd8ff;font-weight:600}
+  #money{position:absolute;top:64px;right:14px;font-size:20px;font-weight:800;color:#7dff9e;text-shadow:0 2px 6px #000;text-align:right}
+  #money small{display:block;font-size:11px;color:#cfe8ff;font-weight:600}
+  #objective{position:absolute;top:12px;left:50%;transform:translateX(-50%);max-width:520px;text-align:center;background:rgba(8,12,28,.72);border:1px solid rgba(255,210,63,.55);border-radius:10px;padding:8px 16px}
+  #objective .day{font-size:11px;letter-spacing:3px;color:#ffd23f;font-weight:800}
+  #objective .text{font-size:15px;font-weight:700}
+  #objective .sub{font-size:12px;color:#bfe3ff}
+  #minimap{position:absolute;right:14px;bottom:14px;border:2px solid rgba(255,255,255,.55);border-radius:50%;box-shadow:0 4px 18px rgba(0,0,0,.6);background:#0a1424}
+  #health{position:absolute;left:14px;bottom:16px;width:240px}
+  #health .bar{height:14px;background:rgba(0,0,0,.6);border:1px solid #fff8;border-radius:7px;overflow:hidden}
+  #health .fill{height:100%;background:linear-gradient(90deg,#37e08b,#a5ff6e);width:100%}
+  #health .lbl{font-size:12px;font-weight:700;text-shadow:0 1px 4px #000;margin-top:4px}
+  #weapon{position:absolute;left:14px;bottom:64px;font-size:14px;font-weight:700;text-shadow:0 2px 5px #000}
+  #radio{position:absolute;left:14px;bottom:96px;font-size:13px;font-weight:700;color:#ffd23f;text-shadow:0 2px 5px #000}
+  #toast{position:absolute;left:50%;bottom:150px;transform:translateX(-50%);font-size:19px;font-weight:800;text-shadow:0 2px 8px #000;text-align:center}
+  #speed{position:absolute;right:180px;bottom:20px;font-size:26px;font-weight:800;text-shadow:0 2px 6px #000;text-align:right}
+  #speed small{display:block;font-size:11px;color:#cfe8ff}
+  #hint{position:absolute;left:50%;bottom:24px;transform:translateX(-50%);font-size:13px;color:#dfeeff;text-shadow:0 1px 4px #000;background:rgba(0,0,0,.45);padding:5px 12px;border-radius:8px}
+  #menu{position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;background:linear-gradient(160deg,rgba(10,8,32,.88),rgba(40,8,60,.82))}
+  #menu .card{max-width:640px;padding:34px 40px;text-align:center;background:rgba(6,10,26,.85);border:1px solid #ff2e88;border-radius:16px;box-shadow:0 0 60px rgba(255,46,136,.35)}
+  #menu h1{margin:0;font-size:52px;letter-spacing:6px;color:#ffd23f;text-shadow:0 0 24px rgba(255,210,63,.7)}
+  #menu h2{margin:4px 0 14px;font-size:16px;letter-spacing:5px;color:#ff5ea8;font-weight:700}
+  #menu p{font-size:14px;line-height:1.55;color:#dfe9ff}
+  #menu .btn{display:inline-block;margin:8px 6px 0;padding:12px 26px;font-size:16px;font-weight:800;border-radius:10px;border:0;cursor:pointer;background:#ffd23f;color:#1a1030}
+  #menu .btn.ghost{background:transparent;color:#fff;border:1px solid #fff}
+  #menu .keys{font-size:12px;color:#9fb6d8;margin-top:14px;line-height:1.7}
+  #pause{position:fixed;inset:0;z-index:9;display:none;align-items:center;justify-content:center;background:rgba(4,6,16,.7)}
+  #pause .card{padding:28px 36px;background:#0a1226;border:1px solid #ffd23f;border-radius:14px;text-align:center}
+  #pause .btn{margin:6px;padding:10px 22px;font-size:15px;font-weight:800;border-radius:9px;border:0;cursor:pointer;background:#ffd23f;color:#1a1030}
+  #missioncard{position:fixed;inset:0;z-index:8;display:none;align-items:center;justify-content:center;background:rgba(4,6,16,.55)}
+  #missioncard .card{padding:26px 34px;background:#0a1226;border:2px solid #37e08b;border-radius:14px;text-align:center;max-width:520px}
+  #missioncard h3{margin:0 0 6px;font-size:24px;color:#37e08b}
+  #missioncard p{font-size:14px;line-height:1.5;color:#dfe9ff}
+</style>
+</head>
+<body>
+<div id="game"></div>
+<div id="hud">
+  <div id="topbar">
+    <div id="wanted"></div>
+    <div id="clock">18:42<small>SOLMAR BAY &middot; DAY 1</small></div>
+  </div>
+  <div id="objective"><div class="day">DAY 1 — THE CALL</div><div class="text">Find your car at the Marina</div><div class="sub">Follow the yellow marker. Press E near a car to take it.</div></div>
+  <div id="money">$1,250<small>REP 12 &middot; HEAT LOW</small></div>
+  <div id="radio">♪ BAY FM 92.1 — Sunset Drive</div>
+  <div id="weapon">FISTS</div>
+  <div id="health"><div class="bar"><div class="fill" id="hpfill"></div></div><div class="lbl" id="hplbl">HEALTH 100 &middot; ARMOR 0</div></div>
+  <div id="speed">0<small>KM/H</small></div>
+  <canvas id="minimap" width="168" height="168"></canvas>
+  <div id="toast"></div>
+  <div id="hint">WASD move &middot; E enter/exit car &middot; SHIFT run &middot; SPACE brake &middot; CLICK shoot &middot; 1/2 weapons &middot; R radio &middot; C camera &middot; ESC pause</div>
+</div>
+<div id="menu">
+  <div class="card">
+    <h1>SOLMAR</h1>
+    <h2>THREE DAYS &middot; AN OPEN-WORLD CRIME STORY</h2>
+    <p>You are <b>Lena "Vex" Marlowe</b>, a getaway driver who swore she was out.
+    Three days in Solmar Bay will change that: a debt, a broker, a vault,
+    and one last sunrise. Steal cars, outrun the Solmar Bay Police, build your
+    reputation, and survive all nine story missions — or take side work as a
+    cab driver, vigilante, or street racer when the heat gets too high.</p>
+    <p><b>Day 1</b> The Call &middot; <b>Day 2</b> The Broker &middot; <b>Day 3</b> The Vault</p>
+    <button class="btn" id="btnPlay">▶ START STORY</button>
+    <button class="btn ghost" id="btnContinue">CONTINUE SAVE</button>
+    <button class="btn ghost" id="btnFree">FREE ROAM</button>
+    <div class="keys">WASD move / drive &middot; E enter or steal a car &middot; SHIFT sprint &middot; SPACE handbrake &middot; MOUSE aim, CLICK shoot &middot; 1 fists / 2 pistol &middot; R radio &middot; C camera &middot; ESC pause &middot; M toggle mission marker<br>Sound on for radio stations, engine, sirens and gunfire — all synthesized live.</div>
+  </div>
+</div>
+<div id="pause"><div class="card"><h2>PAUSED</h2><p id="pauseStats"></p>
+<button class="btn" id="btnResume">RESUME</button><button class="btn" id="btnSave">SAVE GAME</button><button class="btn" id="btnMenu">QUIT TO MENU</button></div></div>
+<div id="missioncard"><div class="card"><h3 id="mcTitle">MISSION COMPLETE</h3><p id="mcText"></p><button class="btn" id="btnMcOk" style="padding:10px 22px;font-size:15px;font-weight:800;border-radius:9px;border:0;cursor:pointer;background:#37e08b;color:#06210f">CONTINUE</button></div></div>
+<script src="vendor/three.min.js"></script>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
